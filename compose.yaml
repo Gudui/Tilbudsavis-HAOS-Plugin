@@ -1,0 +1,29 @@
+services:
+  offer-radar:
+    build:
+      context: ./addon
+    container_name: offer-radar-dev
+    ports:
+      - "${OFFER_RADAR_PORT:-8099}:8099"
+    volumes:
+      - ./data:/data
+    environment:
+      PORT: "8099"
+      OFFER_RADAR_DATA_DIR: /data
+      OFFER_RADAR_OPTIONS_PATH: /data/options.json
+      # Defaults are intentionally mock-safe for local development.
+      # Set OFFER_RADAR_PROVIDER=etilbudsavis in .env to test the live unofficial adapter.
+      OFFER_RADAR_PROVIDER: ${OFFER_RADAR_PROVIDER:-mock}
+      OFFER_RADAR_LATITUDE: ${OFFER_RADAR_LATITUDE:-55.6761}
+      OFFER_RADAR_LONGITUDE: ${OFFER_RADAR_LONGITUDE:-12.5683}
+      OFFER_RADAR_RADIUS_METERS: ${OFFER_RADAR_RADIUS_METERS:-25000}
+      OFFER_RADAR_LOCALE: ${OFFER_RADAR_LOCALE:-da_DK}
+      OFFER_RADAR_SYNC_INTERVAL_MINUTES: ${OFFER_RADAR_SYNC_INTERVAL_MINUTES:-0}
+      OFFER_RADAR_MAX_RESULTS_PER_QUERY: ${OFFER_RADAR_MAX_RESULTS_PER_QUERY:-24}
+      OFFER_RADAR_REQUEST_TIMEOUT_SECONDS: ${OFFER_RADAR_REQUEST_TIMEOUT_SECONDS:-12}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8099/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
