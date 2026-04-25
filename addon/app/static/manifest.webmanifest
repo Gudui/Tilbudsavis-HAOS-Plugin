@@ -1,0 +1,16 @@
+{
+  "name": "Offer Radar",
+  "short_name": "Offer Radar",
+  "start_url": "../",
+  "display": "standalone",
+  "background_color": "#f3efe4",
+  "theme_color": "#f3efe4",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

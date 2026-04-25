@@ -1,7 +1,10 @@
 __pycache__/
 *.py[cod]
 .venv/
+.vendor/
 .pytest_cache/
+.pytest-cache/
+.pytest-tmp/
 .coverage
 htmlcov/
 .env

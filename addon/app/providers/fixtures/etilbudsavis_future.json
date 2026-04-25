@@ -1,0 +1,27 @@
+{
+  "results": [
+    {
+      "id": "pepsi-lidl-future",
+      "heading": "Pepsi Max 1,5 L",
+      "description": "Næste uges kampagne",
+      "pricing": {
+        "price": 9.5,
+        "currency": "DKK"
+      },
+      "store": {
+        "name": "Lidl Amager",
+        "chain": "Lidl"
+      },
+      "images": {
+        "primary": "https://example.invalid/pepsi-lidl.jpg"
+      },
+      "validity": {
+        "from": "2026-04-27T00:00:00+02:00",
+        "until": "2026-05-03T21:00:00+02:00"
+      },
+      "links": {
+        "web": "https://example.invalid/offers/pepsi-lidl-future"
+      }
+    }
+  ]
+}

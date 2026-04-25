@@ -1,0 +1,28 @@
+{
+  "results": [
+    {
+      "id": "pepsi-bilka-active",
+      "heading": "Pepsi Max 1,5 L",
+      "description": "Sukkerfri sodavand i stor flaske",
+      "pricing": {
+        "price": 10.0,
+        "currency": "DKK"
+      },
+      "store": {
+        "name": "Bilka Field's",
+        "chain": "Bilka"
+      },
+      "images": {
+        "primary": "https://example.invalid/pepsi-bilka.jpg"
+      },
+      "validity": {
+        "from": "2026-04-22T00:00:00+02:00",
+        "until": "2026-04-28T22:00:00+02:00"
+      },
+      "links": {
+        "web": "https://example.invalid/offers/pepsi-bilka-active"
+      }
+    }
+  ]
+}
+

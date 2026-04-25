@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Offer Radar</title>
+    <meta
+      name="description"
+      content="Watch only the offers you care about, grouped for store runs, product comparisons, and upcoming deal windows."
+    />
+    <meta name="theme-color" content="#f3efe4" />
+    <link rel="manifest" href="{{ request.url_for('static', path='manifest.webmanifest') }}" />
+    <link rel="stylesheet" href="{{ request.url_for('static', path='styles.css') }}" />
+    <script defer src="{{ request.url_for('static', path='app.js') }}"></script>
+  </head>
+  <body data-provider="{{ settings.provider }}">
+    <div class="app-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Offer Radar</p>
+          <h1>Watched-offer intelligence for real shopping trips.</h1>
+          <p class="hero-copy">
+            Compare watched products across stores, catch expiring offers, and keep upcoming catalogue windows separate from active deals.
+          </p>
+        </div>
+        <div class="hero-meta">
+          <span class="pill">Provider: {{ settings.provider }}</span>
+          <span class="pill">SQLite: {{ settings.database_path }}</span>
+          <button id="sync-button" class="primary-button" type="button">Sync Offers</button>
+        </div>
+      </header>
+
+      <main class="layout">
+        <aside class="sidebar">
+          <section class="panel">
+            <div class="panel-heading">
+              <h2>Watched Products</h2>
+              <button id="refresh-button" type="button">Refresh</button>
+            </div>
+            <form id="watch-form" class="watch-form">
+              <label>
+                <span>Name</span>
+                <input name="name" placeholder="Pepsi Max" required />
+              </label>
+              <label>
+                <span>Keywords</span>
+                <input name="keywords" placeholder="pepsi max, 1,5 l" />
+              </label>
+              <label>
+                <span>Exclude keywords</span>
+                <input name="exclude_keywords" placeholder="zero caffeine" />
+              </label>
+              <label>
+                <span>Store filters</span>
+                <input name="store_filters" placeholder="Bilka, Netto" />
+              </label>
+              <label>
+                <span>Max price (DKK)</span>
+                <input name="max_price" inputmode="decimal" placeholder="15" />
+              </label>
+              <button class="primary-button" type="submit">Add Watch</button>
+            </form>
+            <div id="watch-list" class="watch-list"></div>
+          </section>
+
+          <section class="panel">
+            <h2>Sync Status</h2>
+            <div id="health-summary" class="health-summary"></div>
+          </section>
+        </aside>
+
+        <section class="content">
+          <nav class="view-tabs" aria-label="Offer views">
+            <button class="tab-button active" data-view="dashboard" type="button">Dashboard</button>
+            <button class="tab-button" data-view="store" type="button">Store View</button>
+            <button class="tab-button" data-view="product" type="button">Product View</button>
+            <button class="tab-button" data-view="best" type="button">Best Deals</button>
+            <button class="tab-button" data-view="expiring" type="button">Expiring Soon</button>
+            <button class="tab-button" data-view="upcoming" type="button">Upcoming</button>
+          </nav>
+
+          <section id="view-dashboard" class="view-panel active">
+            <div id="dashboard-summary" class="summary-grid"></div>
+            <div class="split-grid">
+              <section class="panel">
+                <div class="panel-heading">
+                  <h2>Best Current Matches</h2>
+                </div>
+                <div id="dashboard-best"></div>
+              </section>
+              <section class="panel">
+                <div class="panel-heading">
+                  <h2>Expiring Soon</h2>
+                </div>
+                <div id="dashboard-expiring"></div>
+              </section>
+              <section class="panel">
+                <div class="panel-heading">
+                  <h2>Upcoming Offers</h2>
+                </div>
+                <div id="dashboard-upcoming"></div>
+              </section>
+            </div>
+          </section>
+
+          <section id="view-store" class="view-panel">
+            <div class="panel filter-bar">
+              <label>
+                <span>Inspect one store</span>
+                <select id="store-select">
+                  <option value="">All stores with active matches</option>
+                </select>
+              </label>
+            </div>
+            <div id="store-groups" class="panel-stack"></div>
+            <div id="store-detail" class="panel hidden"></div>
+          </section>
+
+          <section id="view-product" class="view-panel">
+            <div class="panel filter-bar">
+              <label>
+                <span>Compare one watched product</span>
+                <select id="product-select">
+                  <option value="">Pick a watched product</option>
+                </select>
+              </label>
+            </div>
+            <div id="product-groups" class="panel-stack"></div>
+            <div id="product-detail" class="panel hidden"></div>
+          </section>
+
+          <section id="view-best" class="view-panel">
+            <div class="panel">
+              <div class="panel-heading">
+                <h2>Best Deals</h2>
+                <p>Sorted by price first, then match quality.</p>
+              </div>
+              <div id="best-deals"></div>
+            </div>
+          </section>
+
+          <section id="view-expiring" class="view-panel">
+            <div class="panel">
+              <div class="panel-heading">
+                <h2>Expiring Soon</h2>
+                <p>Active offers ending within the next 48 hours.</p>
+              </div>
+              <div id="expiring-list"></div>
+            </div>
+          </section>
+
+          <section id="view-upcoming" class="view-panel">
+            <div class="panel">
+              <div class="panel-heading">
+                <h2>Upcoming</h2>
+                <p>Future-valid offers kept separate from active deals.</p>
+              </div>
+              <div id="upcoming-list"></div>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
+

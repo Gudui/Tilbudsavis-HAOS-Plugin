@@ -2,7 +2,10 @@ services:
   offer-radar:
     build:
       context: ./addon
+      dockerfile: Dockerfile
     container_name: offer-radar-dev
+    env_file:
+      - .env
     ports:
       - "${OFFER_RADAR_PORT:-8099}:8099"
     volumes:
