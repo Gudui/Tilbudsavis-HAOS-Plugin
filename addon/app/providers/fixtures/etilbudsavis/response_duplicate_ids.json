@@ -1,0 +1,17 @@
+{
+  "results": [
+    {
+      "id": "eta-dup-1",
+      "heading": "Pepsi Max 1,5 L",
+      "pricing": {"price": 10.0, "currency": "DKK"},
+      "store": {"name": "REMA 1000 Valby", "chain": "REMA 1000"}
+    },
+    {
+      "id": "eta-dup-1",
+      "heading": "Pepsi Max 1,5 L",
+      "pricing": {"price": 9.5, "currency": "DKK"},
+      "store": {"name": "REMA 1000 Valby", "chain": "REMA 1000"}
+    }
+  ]
+}
+

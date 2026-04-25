@@ -1,0 +1,12 @@
+{
+  "results": [
+    {
+      "id": "eta-bleer-no-store",
+      "heading": "Pampers bleer str. 4",
+      "pricing": {"price": 79.0, "currency": "DKK"},
+      "images": {"primary": "https://example.invalid/eta-bleer.jpg"},
+      "validity": {"from": "2026-04-24T00:00:00+02:00", "until": "2026-04-28T18:00:00+02:00"}
+    }
+  ]
+}
+

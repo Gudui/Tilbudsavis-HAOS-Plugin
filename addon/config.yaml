@@ -2,7 +2,7 @@ name: Offer Radar
 slug: offer_radar
 version: 0.1.0
 description: Personal-use watched-offer dashboard for Danish catalogue providers
-url: https://github.com/example/offer-radar
+url: https://github.com/Gudui/Tilbudsavis-HAOS-Plugin
 startup: application
 boot: auto
 init: false
@@ -17,23 +17,49 @@ panel_title: Offer Radar
 map:
   - share:rw
 options:
-  provider: mock
+  providers:
+    - mock
+  provider: ""
   latitude: 55.6761
   longitude: 12.5683
   radius_meters: 25000
   locale: da_DK
   sync_interval_minutes: 0
   max_results_per_query: 24
-  request_timeout_seconds: 12
+  provider_timeout_seconds: 15
+  provider_rate_limit_seconds: 2
+  provider_max_retries: 2
+  provider_user_agent: OfferRadar/0.2 (Home Assistant add-on personal-use local app)
+  live_provider_tests: false
+  etilbudsavis_base_url: https://api.etilbudsavis.dk
   etilbudsavis_search_url: ""
+  etilbudsavis_locale: da_DK
+  etilbudsavis_radius_meters: 10000
+  etilbudsavis_max_results_per_query: 24
+  minetilbud_base_url: https://minetilbud.dk
+  minetilbud_max_catalogs_per_sync: 50
+  minetilbud_store_filters: []
 schema:
-  provider: "list(mock|etilbudsavis)"
+  providers:
+    - "match(^(mock|etilbudsavis|minetilbud)$)"
+  provider: str?
   latitude: float
   longitude: float
   radius_meters: int(1000,100000)
   locale: str
   sync_interval_minutes: int(0,1440)
   max_results_per_query: int(1,100)
-  request_timeout_seconds: int(1,60)
+  provider_timeout_seconds: int(1,60)
+  provider_rate_limit_seconds: float(0,30)
+  provider_max_retries: int(0,5)
+  provider_user_agent: str
+  live_provider_tests: bool
+  etilbudsavis_base_url: str
   etilbudsavis_search_url: str?
-
+  etilbudsavis_locale: str
+  etilbudsavis_radius_meters: int(1000,100000)
+  etilbudsavis_max_results_per_query: int(1,100)
+  minetilbud_base_url: str
+  minetilbud_max_catalogs_per_sync: int(1,200)
+  minetilbud_store_filters:
+    - str

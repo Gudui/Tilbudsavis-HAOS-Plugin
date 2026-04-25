@@ -1,0 +1,17 @@
+{
+  "results": [
+    {
+      "id": "eta-pepsi-1",
+      "heading": "Pepsi Max 1,5 L",
+      "description": "Weekendtilbud",
+      "pricing": {"price": 10.0, "currency": "DKK"},
+      "unitText": "1,5 L",
+      "store": {"id": "rema-001", "name": "REMA 1000 Valby", "chain": "rema1000"},
+      "images": {"primary": "https://example.invalid/eta-pepsi.jpg"},
+      "validity": {"from": "2026-04-24T00:00:00+02:00", "until": "2026-04-25T18:00:00+02:00"},
+      "links": {"web": "https://example.invalid/eta-pepsi-1", "catalog": "https://example.invalid/rema-catalog"},
+      "pageNumber": 3
+    }
+  ]
+}
+

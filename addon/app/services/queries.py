@@ -53,6 +53,7 @@ def filter_matches(
     watched_product_id: str | None = None,
     query: str | None = None,
     max_price: float | None = None,
+    provider: str | None = None,
     now: datetime | None = None,
 ) -> list[dict]:
     enriched = [enrich_match_payload(match, now) for match in matches]
@@ -74,6 +75,8 @@ def filter_matches(
             continue
         if watched_product_id and watch["id"] != watched_product_id:
             continue
+        if provider and offer["provider"] != provider:
+            continue
         if max_price is not None and offer["price"] is not None and offer["price"] > max_price:
             continue
         if query_text:
@@ -83,6 +86,7 @@ def filter_matches(
                     offer["description"] or "",
                     offer["store_name"] or "",
                     offer["store_chain"] or "",
+                    offer["provider"] or "",
                     watch["name"] or "",
                 ]
             ).casefold()

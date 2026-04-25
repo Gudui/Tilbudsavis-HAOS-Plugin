@@ -1,0 +1,14 @@
+{
+  "results": [
+    {
+      "id": "eta-kaffe-1",
+      "heading": "Formalet kaffe 400 g",
+      "description": "Fyldig kaffe",
+      "pricing": {"price": null, "currency": "DKK"},
+      "store": {"name": "føtex Hvidovre", "chain": "foetex"},
+      "images": {"primary": "https://example.invalid/eta-kaffe.jpg"},
+      "validity": {"from": "2026-04-24T00:00:00+02:00", "until": "2026-04-26T18:00:00+02:00"}
+    }
+  ]
+}
+
