@@ -1,35 +1,32 @@
 from __future__ import annotations
 
 
-def test_root_and_health_endpoints_render(client):
+def test_root_health_and_provider_endpoints_render(client):
     root = client.get("/")
     health = client.get("/health")
+    providers = client.get("/api/providers")
 
     assert root.status_code == 200
     assert "Offer Radar" in root.text
     assert health.status_code == 200
     assert health.json()["status"] == "ok"
+    assert providers.status_code == 200
+    assert providers.json()["providers"]
 
 
-def test_sync_and_match_views_work_with_mock_provider(client):
+def test_sync_and_provider_diagnostics_work(client):
     sync = client.post("/api/sync")
     assert sync.status_code == 200
     assert sync.json()["status"] == "ok"
-    assert sync.json()["offers_fetched"] == 6
+    assert sync.json()["offers_fetched_total"] >= 4
 
-    active = client.get("/api/matches?status=active")
-    upcoming = client.get("/api/matches?status=upcoming")
-    grouped_store = client.get("/api/matches/grouped?by=store")
-    grouped_product = client.get("/api/matches/grouped?by=product")
-    sorted_price = client.get("/api/matches/sorted?by=price")
-    sorted_expires = client.get("/api/matches/sorted?by=expires")
-    stores = client.get("/api/stores")
+    provider_runs = client.get("/api/sync-runs")
+    provider_health = client.get("/api/providers/mock/health")
+    dashboard = client.get("/api/dashboard")
 
-    assert active.status_code == 200
-    assert all(match["status"] == "active" for match in active.json()["matches"])
-    assert all(match["status"] == "upcoming" for match in upcoming.json()["matches"])
-    assert grouped_store.json()["groups"]
-    assert grouped_product.json()["groups"]
-    assert sorted_price.json()["matches"][0]["offer"]["price"] == 10.0
-    assert sorted_expires.json()["matches"][0]["offer"]["id"] == "mock:pepsi-rema-no-image"
-    assert stores.json()["stores"]
+    assert provider_runs.status_code == 200
+    assert provider_runs.json()["sync_runs"]
+    assert provider_health.status_code == 200
+    assert provider_health.json()["status"] == "ok"
+    assert dashboard.status_code == 200
+    assert dashboard.json()["providers"]

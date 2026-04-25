@@ -1,0 +1,12 @@
+{
+  "results": [
+    {
+      "id": "eta-bleer-upcoming",
+      "heading": "Pampers bleer str. 4",
+      "pricing": {"price": 75.0, "currency": "DKK"},
+      "store": {"name": "Lidl Amager", "chain": "Lidl"},
+      "validity": {"from": "2026-04-27T00:00:00+02:00", "until": "2026-05-02T18:00:00+02:00"}
+    }
+  ]
+}
+

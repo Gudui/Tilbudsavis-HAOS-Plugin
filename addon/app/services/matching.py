@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 from app.models import MatchRecord, NormalizedOffer, WatchedProduct
+from app.services.store_normalization import canonicalize_chain_name
 
 
 def utc_now() -> datetime:
@@ -98,8 +99,8 @@ def build_matches(
 
 
 def _store_filter_matches(offer: NormalizedOffer, filters: list[str]) -> bool:
-    store_text = f"{offer.store_name} {offer.store_chain or ''}".casefold()
-    return any(term.casefold() in store_text for term in filters if term.strip())
+    store_text = f"{offer.store_name} {canonicalize_chain_name(offer.store_chain) or ''}".casefold()
+    return any((canonicalize_chain_name(term) or term).casefold() in store_text for term in filters if term.strip())
 
 
 def _unique_terms(terms: list[str]) -> list[str]:
@@ -112,4 +113,3 @@ def _unique_terms(terms: list[str]) -> list[str]:
             seen.add(key)
             unique.append(normalized)
     return unique
-

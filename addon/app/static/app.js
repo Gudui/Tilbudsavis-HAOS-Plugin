@@ -3,6 +3,7 @@ const state = {
   activeView: "dashboard",
   health: null,
   dashboard: null,
+  providerHealth: [],
   watches: [],
   stores: [],
   storeGroups: [],
@@ -19,6 +20,7 @@ const elements = {
   syncButton: document.getElementById("sync-button"),
   refreshButton: document.getElementById("refresh-button"),
   dashboardSummary: document.getElementById("dashboard-summary"),
+  providerHealth: document.getElementById("provider-health"),
   dashboardBest: document.getElementById("dashboard-best"),
   dashboardExpiring: document.getElementById("dashboard-expiring"),
   dashboardUpcoming: document.getElementById("dashboard-upcoming"),
@@ -96,6 +98,7 @@ function renderMatchCard(match) {
       </header>
       <div class="tag-row">
         <span class="status-badge ${escapeHtml(match.date_state || match.status)}">${escapeHtml(statusLabel)}</span>
+        <span class="tag">${escapeHtml(offer.provider)}</span>
         <span class="tag">${escapeHtml(offer.store_chain || offer.store_name)}</span>
         <span class="tag">${escapeHtml(formatValidity(offer))}</span>
       </div>
@@ -138,6 +141,35 @@ function renderSummaryCards() {
   elements.dashboardBest.innerHTML = renderMatchList(dashboard.best_matches, "No active matches yet.");
   elements.dashboardExpiring.innerHTML = renderMatchList(dashboard.expiring_soon, "Nothing is expiring soon.");
   elements.dashboardUpcoming.innerHTML = renderMatchList(dashboard.upcoming, "No upcoming offers right now.");
+  elements.providerHealth.innerHTML = renderProviderHealthCards();
+}
+
+function renderProviderHealthCards() {
+  if (!state.providerHealth.length) {
+    return renderEmpty("No provider diagnostics yet.");
+  }
+  return state.providerHealth
+    .map(
+      (provider) => `
+        <article class="summary-card">
+          <div class="summary-label">${escapeHtml(provider.provider)}</div>
+          <span class="status-badge ${escapeHtml(provider.status)}">${escapeHtml(provider.status)}</span>
+          <div class="watch-meta">Last success: ${escapeHtml(provider.last_successful_sync_at ? formatDate(provider.last_successful_sync_at) : "None")}</div>
+          <div class="watch-meta">Raw payloads: ${provider.raw_payload_count}</div>
+          ${
+            provider.last_error
+              ? `<div class="watch-meta">Last error: ${escapeHtml(provider.last_error)}</div>`
+              : ""
+          }
+          ${
+            provider.last_schema_drift_warning
+              ? `<div class="watch-meta">Schema drift: ${escapeHtml(provider.last_schema_drift_warning)}</div>`
+              : ""
+          }
+        </article>
+      `,
+    )
+    .join("");
 }
 
 function renderWatches() {
@@ -185,7 +217,7 @@ function renderHealth() {
   const lastSync = state.health.last_sync;
   elements.healthSummary.innerHTML = `
     <div class="watch-meta">Status: ${escapeHtml(state.health.status)}</div>
-    <div class="watch-meta">Provider: ${escapeHtml(state.health.provider)}</div>
+    <div class="watch-meta">Providers: ${escapeHtml((state.health.providers || []).join(", "))}</div>
     <div class="watch-meta">Database: ${escapeHtml(state.health.database_path)}</div>
     <div class="watch-meta">
       Last sync: ${lastSync ? escapeHtml(`${lastSync.status} at ${formatDate(lastSync.completed_at)}`) : "No sync yet"}
@@ -303,9 +335,10 @@ function activateView(view) {
 }
 
 async function loadAll() {
-  const [health, dashboard, watches, storeGroups, productGroups, bestDeals, expiring, upcoming, stores] =
+  const [health, providers, dashboard, watches, storeGroups, productGroups, bestDeals, expiring, upcoming, stores] =
     await Promise.all([
       fetchJson("health"),
+      fetchJson("api/providers"),
       fetchJson("api/dashboard"),
       fetchJson("api/watched-products"),
       fetchJson("api/matches/grouped?by=store&status=active"),
@@ -317,6 +350,7 @@ async function loadAll() {
     ]);
 
   state.health = health;
+  state.providerHealth = providers.providers;
   state.dashboard = dashboard;
   state.watches = watches;
   state.storeGroups = storeGroups.groups;

@@ -4,96 +4,147 @@ import hashlib
 import time
 from datetime import datetime, timezone
 from typing import Any
-from urllib.parse import urlencode
-
-import httpx
 
 from app.config import Settings
-from app.models import NormalizedOffer, WatchedProduct
+from app.models import NormalizedOffer, ProviderFetchResult, WatchedProduct
 from app.providers.base import ProviderError
+from app.providers.http import ProviderHttpClient
+from app.services.store_normalization import canonicalize_chain_name, normalize_store_slug
 
 
 def _parse_datetime(value: Any) -> datetime | None:
-    if not value:
+    if value in (None, ""):
         return None
     if isinstance(value, (int, float)):
         return datetime.fromtimestamp(float(value), tz=timezone.utc)
-    text = str(value).strip()
-    if not text:
+    text = str(value).strip().replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
         return None
-    normalized = text.replace("Z", "+00:00")
-    parsed = datetime.fromisoformat(normalized)
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=timezone.utc)
     return parsed
 
 
-def _parse_price(raw_offer: dict[str, Any]) -> tuple[float | None, str | None]:
-    price_sources = [
-        raw_offer.get("price"),
-        raw_offer.get("pricing", {}).get("price"),
-        raw_offer.get("pricing", {}).get("current"),
-        raw_offer.get("priceInfo", {}).get("current"),
-    ]
-    currency_sources = [
-        raw_offer.get("currency"),
-        raw_offer.get("pricing", {}).get("currency"),
-        raw_offer.get("priceInfo", {}).get("currency"),
-    ]
-    price = next((value for value in price_sources if value not in (None, "")), None)
-    currency = next((value for value in currency_sources if value not in (None, "")), None)
-    return (float(price), str(currency) if currency else None) if price is not None else (None, str(currency) if currency else None)
+def _parse_float(value: Any) -> float | None:
+    if value in (None, ""):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    cleaned = str(value).strip().replace("kr.", "").replace("kr", "").replace(",", ".")
+    digits = "".join(character for character in cleaned if character.isdigit() or character == ".")
+    try:
+        return float(digits) if digits else None
+    except ValueError:
+        return None
 
 
-def slugify_store(value: str | None) -> str:
-    text = (value or "unknown-store").strip().casefold()
-    cleaned = []
-    for character in text:
-        if character.isalnum():
-            cleaned.append(character)
-        elif character in {" ", "-", "_", "/"}:
-            cleaned.append("-")
-    slug = "".join(cleaned).strip("-")
-    while "--" in slug:
-        slug = slug.replace("--", "-")
-    return slug or "unknown-store"
+def _parse_int(value: Any) -> int | None:
+    if value in (None, ""):
+        return None
+    if isinstance(value, int):
+        return value
+    digits = "".join(character for character in str(value) if character.isdigit())
+    return int(digits) if digits else None
+
+
+def _get_nested(data: dict[str, Any], *keys: str) -> Any:
+    current: Any = data
+    for key in keys:
+        if not isinstance(current, dict):
+            return None
+        current = current.get(key)
+    return current
+
+
+def _first_non_empty(*values: Any) -> Any:
+    return next((value for value in values if value not in (None, "")), None)
+
+
+def extract_etilbudsavis_results(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    candidate = _first_non_empty(
+        payload.get("results"),
+        payload.get("offers"),
+        payload.get("items"),
+        _get_nested(payload, "data", "results"),
+        _get_nested(payload, "data", "offers"),
+    )
+    if isinstance(candidate, list):
+        return [item for item in candidate if isinstance(item, dict)]
+    return []
 
 
 def normalize_etilbudsavis_offer(raw_offer: dict[str, Any], provider_name: str = "etilbudsavis") -> NormalizedOffer:
     store = raw_offer.get("store") or raw_offer.get("retailer") or {}
-    images = raw_offer.get("images") or {}
-    validity = raw_offer.get("validity") or {}
+    images = raw_offer.get("images") or raw_offer.get("media") or {}
+    validity = raw_offer.get("validity") or raw_offer.get("period") or {}
     links = raw_offer.get("links") or {}
 
-    external_id = raw_offer.get("id") or raw_offer.get("offerId")
-    if not external_id:
-        external_id = hashlib.sha1(repr(sorted(raw_offer.items())).encode("utf-8")).hexdigest()[:16]
+    provider_offer_id = _first_non_empty(
+        raw_offer.get("id"),
+        raw_offer.get("offerId"),
+        raw_offer.get("externalId"),
+    )
+    if not provider_offer_id:
+        provider_offer_id = hashlib.sha1(repr(sorted(raw_offer.items())).encode("utf-8")).hexdigest()[:16]
 
-    title = raw_offer.get("title") or raw_offer.get("heading") or "Untitled offer"
-    description = raw_offer.get("description") or raw_offer.get("subheading")
-    price, currency = _parse_price(raw_offer)
-    store_name = store.get("name") or store.get("displayName") or "Unknown store"
-    store_chain = store.get("chain") or store.get("chainName") or store.get("brand")
-    image_url = images.get("primary") or images.get("medium") or raw_offer.get("image")
-    valid_from = _parse_datetime(validity.get("from") or raw_offer.get("validFrom"))
-    valid_until = _parse_datetime(validity.get("until") or raw_offer.get("validUntil"))
-    source_url = links.get("web") or raw_offer.get("sourceUrl") or raw_offer.get("url")
+    title = _first_non_empty(raw_offer.get("title"), raw_offer.get("heading"), raw_offer.get("name"), "Untitled offer")
+    description = _first_non_empty(raw_offer.get("description"), raw_offer.get("subheading"), raw_offer.get("text"))
+    price = _parse_float(
+        _first_non_empty(
+            raw_offer.get("price"),
+            _get_nested(raw_offer, "pricing", "price"),
+            _get_nested(raw_offer, "pricing", "current"),
+            _get_nested(raw_offer, "priceInfo", "current"),
+        )
+    )
+    currency = _first_non_empty(
+        raw_offer.get("currency"),
+        _get_nested(raw_offer, "pricing", "currency"),
+        _get_nested(raw_offer, "priceInfo", "currency"),
+        "DKK",
+    )
+    unit_text = _first_non_empty(
+        raw_offer.get("unitText"),
+        raw_offer.get("unit"),
+        _get_nested(raw_offer, "priceInfo", "unit"),
+    )
+    raw_chain = _first_non_empty(store.get("chain"), store.get("chainName"), store.get("brand"), store.get("name"))
+    store_chain = canonicalize_chain_name(str(raw_chain)) if raw_chain else None
+    store_name = str(_first_non_empty(store.get("name"), store.get("displayName"), store_chain, "Unknown store"))
+    store_id = _first_non_empty(store.get("id"), store.get("storeId"), store.get("retailerId"))
+    image_url = _first_non_empty(
+        images.get("primary"),
+        images.get("medium"),
+        raw_offer.get("image"),
+        _get_nested(raw_offer, "image", "url"),
+    )
+    valid_from = _parse_datetime(_first_non_empty(validity.get("from"), raw_offer.get("validFrom")))
+    valid_until = _parse_datetime(_first_non_empty(validity.get("until"), raw_offer.get("validUntil")))
+    source_url = _first_non_empty(links.get("web"), raw_offer.get("sourceUrl"), raw_offer.get("url"))
+    catalog_url = _first_non_empty(links.get("catalog"), raw_offer.get("catalogUrl"))
+    page_number = _parse_int(_first_non_empty(raw_offer.get("pageNumber"), raw_offer.get("page")))
 
-    canonical_id = f"{provider_name}:{external_id}"
     return NormalizedOffer(
-        id=canonical_id,
+        id=f"{provider_name}:{provider_offer_id}",
         provider=provider_name,
+        provider_offer_id=str(provider_offer_id),
         title=str(title),
         description=str(description) if description else None,
         price=price,
-        currency=currency,
-        store_name=str(store_name),
-        store_chain=str(store_chain) if store_chain else None,
-        store_slug=slugify_store(str(store_chain or store_name)),
+        currency=str(currency) if currency else None,
+        unit_text=str(unit_text) if unit_text else None,
+        store_name=store_name,
+        store_chain=store_chain,
+        store_slug=normalize_store_slug(store_chain, store_name),
+        store_id=str(store_id) if store_id else None,
         image_url=str(image_url) if image_url else None,
         valid_from=valid_from,
         valid_until=valid_until,
         source_url=str(source_url) if source_url else None,
+        catalog_url=str(catalog_url) if catalog_url else None,
+        page_number=page_number,
         raw=raw_offer,
     )
 
@@ -103,66 +154,83 @@ class EtilbudsavisProvider:
 
     def __init__(self, settings: Settings):
         self.settings = settings
-        self._last_request_started = 0.0
 
-    def fetch_offers(self, watched_products: list[WatchedProduct]) -> list[NormalizedOffer]:
-        if not self.settings.etilbudsavis_search_url:
-            raise ProviderError(
-                "The unofficial eTilbudsavis adapter is enabled, but OFFER_RADAR_ETILBUDSAVIS_SEARCH_URL is not configured."
-            )
+    def fetch_offers(self, watched_products: list[WatchedProduct]) -> ProviderFetchResult:
+        started = time.perf_counter()
         if not watched_products:
-            return []
+            return ProviderFetchResult(provider=self.provider_name, status="ok")
 
-        offers: dict[str, NormalizedOffer] = {}
         query_terms = self._build_query_terms(watched_products)
-        headers = {
-            "User-Agent": "OfferRadar/0.1 (+https://github.com/example/offer-radar; personal-use local add-on)",
-            "Accept": "application/json",
-        }
-        timeout = httpx.Timeout(float(self.settings.request_timeout_seconds))
-
-        with httpx.Client(timeout=timeout, headers=headers) as client:
+        client = ProviderHttpClient(self.provider_name, self.settings)
+        offers: dict[str, NormalizedOffer] = {}
+        errors: list[str] = []
+        warnings: list[str] = []
+        provider_offers_fetched = 0
+        schema_drift_warning: str | None = None
+        try:
             for term in query_terms:
-                self._respect_rate_limit()
+                params = {
+                    "query": term,
+                    "locale": self.settings.etilbudsavis_locale,
+                    "latitude": self.settings.latitude,
+                    "longitude": self.settings.longitude,
+                    "radius": self.settings.etilbudsavis_radius_meters,
+                    "limit": self.settings.etilbudsavis_max_results_per_query,
+                }
                 try:
-                    response = client.get(
-                        self.settings.etilbudsavis_search_url,
-                        params={
-                            "query": term,
-                            "latitude": self.settings.latitude,
-                            "longitude": self.settings.longitude,
-                            "radius": self.settings.radius_meters,
-                            "locale": self.settings.locale,
-                            "limit": self.settings.max_results_per_query,
-                        },
-                    )
-                    response.raise_for_status()
-                except httpx.HTTPError as exc:
-                    raise ProviderError(
-                        f"Unofficial eTilbudsavis request failed for query '{term}': {exc}"
-                    ) from exc
+                    payload = client.get_json(self.settings.etilbudsavis_request_url, params=params)
+                except ProviderError as exc:
+                    errors.extend(exc.errors)
+                    if exc.schema_drift_warning and not schema_drift_warning:
+                        schema_drift_warning = exc.schema_drift_warning
+                    continue
 
-                payload = response.json()
-                for raw_offer in payload.get("results", []):
-                    normalized = normalize_etilbudsavis_offer(raw_offer)
+                raw_results = extract_etilbudsavis_results(payload)
+                if not raw_results:
+                    warning = f"No extractable results for eTilbudsavis query '{term}'."
+                    warnings.append(warning)
+                    schema_drift_warning = schema_drift_warning or warning
+                    continue
+
+                provider_offers_fetched += len(raw_results)
+                for raw_offer in raw_results:
+                    normalized = normalize_etilbudsavis_offer(raw_offer, provider_name=self.provider_name)
                     offers[normalized.id] = normalized
-        return list(offers.values())
+        finally:
+            client.close()
+
+        status = "ok"
+        if errors and offers:
+            status = "degraded"
+        elif errors and not offers:
+            status = "failed"
+        elif warnings:
+            status = "degraded"
+
+        result = ProviderFetchResult(
+            provider=self.provider_name,
+            offers=list(offers.values()),
+            status=status,
+            provider_offers_fetched=provider_offers_fetched,
+            raw_payloads_persisted=len(offers),
+            error_count=len(errors),
+            warnings=warnings,
+            errors=errors,
+            last_error=errors[-1] if errors else None,
+            schema_drift_warning=schema_drift_warning,
+            duration_ms=int((time.perf_counter() - started) * 1000),
+        )
+        return result
 
     def _build_query_terms(self, watched_products: list[WatchedProduct]) -> list[str]:
-        terms: list[str] = []
         seen: set[str] = set()
-        for product in watched_products:
-            for term in [product.name, *product.keywords]:
+        terms: list[str] = []
+        for watch in watched_products:
+            for term in [watch.name, *watch.keywords]:
                 normalized = term.strip()
-                if normalized and normalized.casefold() not in seen:
-                    seen.add(normalized.casefold())
+                key = normalized.casefold()
+                if normalized and key not in seen:
+                    seen.add(key)
                     terms.append(normalized)
-        return terms[: self.settings.max_results_per_query]
-
-    def _respect_rate_limit(self) -> None:
-        elapsed = time.monotonic() - self._last_request_started
-        minimum_gap = 0.75
-        if elapsed < minimum_gap:
-            time.sleep(minimum_gap - elapsed)
-        self._last_request_started = time.monotonic()
+        return terms[: self.settings.etilbudsavis_max_results_per_query]
 

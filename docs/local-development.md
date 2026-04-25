@@ -16,6 +16,7 @@ What this gives you:
 - app served on `http://localhost:8099`
 - SQLite persisted in `./data/offer_radar.db`
 - `/data/options.json` compatibility through the mounted `./data` directory
+- provider selection and live-test flags controlled through `./.env`
 
 ## Direct Python on Debian
 
@@ -51,14 +52,24 @@ You can simulate add-on config locally by creating `./data/options.json`:
 
 ```json
 {
-  "provider": "mock",
+  "providers": ["mock"],
   "latitude": 55.6761,
   "longitude": 12.5683,
   "radius_meters": 25000,
   "locale": "da_DK",
   "sync_interval_minutes": 0,
   "max_results_per_query": 24,
-  "request_timeout_seconds": 12
+  "provider_timeout_seconds": 15,
+  "provider_rate_limit_seconds": 2,
+  "provider_max_retries": 2,
+  "etilbudsavis_base_url": "https://api.etilbudsavis.dk",
+  "etilbudsavis_search_url": "",
+  "etilbudsavis_locale": "da_DK",
+  "etilbudsavis_radius_meters": 10000,
+  "etilbudsavis_max_results_per_query": 24,
+  "minetilbud_base_url": "https://minetilbud.dk",
+  "minetilbud_max_catalogs_per_sync": 50,
+  "minetilbud_store_filters": []
 }
 ```
 
@@ -67,13 +78,41 @@ Env vars still override values from `options.json`.
 ## Provider modes
 
 - `mock`: default, deterministic, fully offline
-- `etilbudsavis`: unofficial adapter, only safe to use when an explicit search URL is configured
+- `etilbudsavis`: unofficial API-style adapter with retries, rate limiting, explicit user agent, schema-drift warnings, and fixture-backed tests
+- `minetilbud`: homepage-driven catalog discovery plus embedded-JSON extraction from current catalog pages
+
+## Recommended local settings
+
+- Keep `OFFER_RADAR_PROVIDERS=mock` for normal development and CI-like runs.
+- Use `OFFER_RADAR_PROVIDERS=mock,etilbudsavis,minetilbud` only when you want a local mixed-provider sync.
+- Leave `OFFER_RADAR_LIVE_PROVIDER_TESTS=false` unless you explicitly want live smoke tests.
+- When enabling live providers, keep the conservative defaults for timeout, rate limit, and retries unless you have a clear reason to change them.
+
+## Live smoke tests
+
+Live smoke tests are optional and disabled by default. They are not part of normal CI.
+
+Debian:
+
+```bash
+export OFFER_RADAR_LIVE_PROVIDER_TESTS=true
+./scripts/test.sh
+```
+
+Windows PowerShell:
+
+```powershell
+$env:OFFER_RADAR_LIVE_PROVIDER_TESTS='true'
+.\scripts\test.ps1
+```
+
+When enabled, the smoke tests attempt low-volume real requests against the configured live providers. They are intentionally conservative and may still fail if upstream HTML or API structures change.
 
 ## Validation checklist
 
 - Root UI loads at `/`
 - `/health` returns `status: ok`
 - `POST /api/sync` succeeds with mock fixtures
+- `GET /api/providers` returns provider health snapshots
 - Active views exclude expired offers
 - Upcoming and expiring offers are visible separately
-

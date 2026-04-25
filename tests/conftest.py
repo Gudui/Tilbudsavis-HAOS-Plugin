@@ -9,10 +9,10 @@ from app.config import Settings
 from app.main import create_app
 
 
-@pytest.fixture
-def test_settings(tmp_path: Path) -> Settings:
+def make_settings(tmp_path: Path, providers: list[str] | None = None) -> Settings:
+    enabled = providers or ["mock"]
     return Settings(
-        provider="mock",
+        providers=enabled,
         data_dir=tmp_path,
         database_path=tmp_path / "offer_radar.db",
         options_path=tmp_path / "options.json",
@@ -22,10 +22,26 @@ def test_settings(tmp_path: Path) -> Settings:
         locale="da_DK",
         sync_interval_minutes=0,
         max_results_per_query=24,
-        request_timeout_seconds=12,
-        etilbudsavis_search_url=None,
+        provider_timeout_seconds=15,
+        provider_rate_limit_seconds=0,
+        provider_max_retries=0,
+        provider_user_agent="OfferRadarTest/1.0",
+        live_provider_tests=False,
+        etilbudsavis_base_url="https://api.etilbudsavis.dk",
+        etilbudsavis_search_url="https://api.etilbudsavis.dk/v2/offers/search",
+        etilbudsavis_locale="da_DK",
+        etilbudsavis_radius_meters=10000,
+        etilbudsavis_max_results_per_query=10,
+        minetilbud_base_url="https://minetilbud.dk",
+        minetilbud_max_catalogs_per_sync=50,
+        minetilbud_store_filters=[],
         clear_seed_data=False,
     )
+
+
+@pytest.fixture
+def test_settings(tmp_path: Path) -> Settings:
+    return make_settings(tmp_path)
 
 
 @pytest.fixture

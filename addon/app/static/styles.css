@@ -289,6 +289,26 @@ button {
   color: var(--danger);
 }
 
+.status-badge.ok {
+  background: rgba(45, 122, 82, 0.12);
+  color: var(--success);
+}
+
+.status-badge.degraded {
+  background: rgba(166, 104, 0, 0.16);
+  color: var(--warning);
+}
+
+.status-badge.failed {
+  background: rgba(157, 61, 49, 0.12);
+  color: var(--danger);
+}
+
+.status-badge.disabled {
+  background: rgba(31, 36, 48, 0.08);
+  color: var(--muted);
+}
+
 .tag-row {
   display: flex;
   flex-wrap: wrap;
@@ -327,4 +347,3 @@ button {
     grid-template-columns: repeat(3, 1fr);
   }
 }
-

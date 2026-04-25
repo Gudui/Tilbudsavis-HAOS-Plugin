@@ -1,0 +1,12 @@
+{
+  "results": [
+    {
+      "id": "eta-pepsi-no-image",
+      "heading": "Pepsi Max 1,5 L",
+      "pricing": {"price": 12.0, "currency": "DKK"},
+      "store": {"name": "Bilka Field's", "chain": "Bilka"},
+      "validity": {"from": "2026-04-24T00:00:00+02:00", "until": "2026-04-28T18:00:00+02:00"}
+    }
+  ]
+}
+

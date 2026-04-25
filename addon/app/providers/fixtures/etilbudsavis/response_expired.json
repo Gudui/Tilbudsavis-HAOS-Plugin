@@ -1,0 +1,12 @@
+{
+  "results": [
+    {
+      "id": "eta-pepsi-expired",
+      "heading": "Pepsi Max 1,5 L",
+      "pricing": {"price": 13.0, "currency": "DKK"},
+      "store": {"name": "Bilka Field's", "chain": "Bilka"},
+      "validity": {"from": "2026-04-18T00:00:00+02:00", "until": "2026-04-20T18:00:00+02:00"}
+    }
+  ]
+}
+
