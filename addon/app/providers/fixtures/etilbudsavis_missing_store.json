@@ -1,0 +1,24 @@
+{
+  "results": [
+    {
+      "id": "bleer-unknown-store",
+      "heading": "Pampers bleer str. 4",
+      "description": "42 stk. bleer til baby og småbørn",
+      "pricing": {
+        "price": 79.0,
+        "currency": "DKK"
+      },
+      "images": {
+        "primary": "https://example.invalid/bleer-unknown.jpg"
+      },
+      "validity": {
+        "from": "2026-04-24T00:00:00+02:00",
+        "until": "2026-04-30T21:00:00+02:00"
+      },
+      "links": {
+        "web": "https://example.invalid/offers/bleer-unknown-store"
+      }
+    }
+  ]
+}
+

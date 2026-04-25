@@ -1,124 +1,158 @@
-# Offer Radar — Home Assistant OS Add-on Scaffold
+# Offer Radar
 
-Personal-use offer watcher for Danish offers from eTilbudsavis/Tjek-style sources.
+Offer Radar is a personal-use watched-offer app for Danish catalogue providers. It is built for a lightweight Home Assistant OS add-on first, while staying runnable with Docker Compose on Debian and practical to test on Windows with PowerShell.
 
-This scaffold is optimized for Home Assistant OS while remaining testable on normal development machines:
+## What It Does
 
-- Home Assistant OS add-on as production target
-- Debian local testing with Docker Compose or direct Python
-- Windows local testing with Docker Desktop/PowerShell or direct Python
-- Single Docker container
-- FastAPI backend
-- SQLite database stored under `/data` in containers and `./data` during direct local runs
-- Vanilla mobile-first PWA UI
-- Background sync every few hours in production
-- Provider adapter for the unofficial/undocumented eTilbudsavis search endpoint
-- Watched-product matches only; no noisy general feed
-- Store-grouped display for “I am going to one place” use cases
+- Tracks watched products only, not a general all-offers feed
+- Normalizes provider data behind an adapter interface
+- Stores everything locally in SQLite
+- Presents the same matched data through multiple views:
+  - Dashboard
+  - Store view
+  - Product view
+  - Best deals
+  - Expiring soon
+  - Upcoming
 
-## Product position
+## Stack
 
-Offer Radar is not a public SaaS. It is a private household assistant that runs locally and helps you track watched products across whichever stores and catalogues the configured provider exposes.
+- Backend: Python, FastAPI, SQLite
+- Frontend: mobile-first PWA with minimal vanilla JavaScript
+- Tests: pytest with fixture-backed provider coverage
+- Runtime target: Home Assistant OS add-on
+- Local harness: Docker Compose and direct Python
 
-## Why this stack
+## Runtime Modes
 
-Home Assistant OS is add-on/container oriented. A Next.js + Postgres stack is unnecessarily heavy for personal use. This scaffold uses FastAPI + SQLite + vanilla JS because it is small, easy to back up, easy to debug, and works behind Home Assistant Ingress.
-
-## MVP behavior
-
-1. Configure home latitude, longitude, radius, locale, and sync interval.
-2. Add watched products such as `pepsi max`, `kaffe`, `hakket oksekød`, `bleer`.
-3. Sync queries eTilbudsavis once per watched product and alias.
-4. Offers are normalized, deduplicated, matched, ranked, and stored locally.
-5. UI shows only matching offers, grouped by store/chain.
-6. Mobile users can install the PWA from the browser or use it through the Home Assistant app.
-
-## Important provider note
-
-The included eTilbudsavis provider is intentionally isolated behind an adapter. The endpoint is unofficial and undocumented, so it may change, disappear, rate-limit, or require different parameters. Do not let provider assumptions leak into the domain model or UI.
-
-## Repository layout
-
-```text
-addon/                         Home Assistant add-on files
-  config.yaml                  Add-on metadata and options schema
-  Dockerfile                   Lightweight container image
-  run.sh                       Container entrypoint
-  requirements.txt             Python runtime dependencies
-  app/                         FastAPI application
-    main.py                    API and HTML routes
-    db.py                      SQLite schema and helpers
-    config.py                  Add-on options/env loader
-    providers/                 Provider adapter layer
-    services/                  Matching and sync logic
-    static/                    PWA assets
-    templates/                 HTML shell
-
-compose.yaml                   Local Docker Compose harness
-.env.example                   Local config defaults
-scripts/                       Debian and Windows dev/test scripts
-data.example/                  Example options.json
-docs/                          Product, architecture, local dev, and build plan
-prompts/                       Agent prompts for accelerated implementation
-AGENTS.md                      Coding-agent instructions
-BUILD_PLAN.md                  Phase plan for the agent
-```
-
-## Fast local start — Debian
+### 1. Docker Compose local dev
 
 ```bash
 cp .env.example .env
-./scripts/dev.sh
+docker compose up --build
 ```
 
-Open `http://localhost:8099`.
+Open [http://localhost:8099](http://localhost:8099).
 
-## Fast local start — Windows PowerShell
+Persistent local data:
 
-```powershell
-Copy-Item .env.example .env
-.\scripts\dev.ps1
-```
+- SQLite: `./data/offer_radar.db`
+- Optional Home Assistant-style options file for local testing: `./data/options.json`
 
-Open `http://localhost:8099`.
-
-## Direct Python development
+### 2. Direct Python local dev on Debian
 
 ```bash
-cd addon
-python -m venv .venv
-. .venv/bin/activate
-pip install -r requirements.txt
-OFFER_RADAR_DATA_DIR=../data OFFER_RADAR_PROVIDER=mock uvicorn app.main:app --reload --host 0.0.0.0 --port 8099
+cp .env.example .env
+./scripts/dev.sh --direct
 ```
 
-## Test commands
-
-Debian:
+Manual tests:
 
 ```bash
 ./scripts/test.sh
 ```
 
-Windows PowerShell:
+### 3. Direct Python local dev on Windows PowerShell
+
+```powershell
+Copy-Item .env.example .env
+.\scripts\dev.ps1 -Direct
+```
+
+Manual tests:
 
 ```powershell
 .\scripts\test.ps1
 ```
 
-## Home Assistant OS install path
+### 4. Home Assistant add-on deployment
 
-For a local add-on:
+The add-on files live under [`addon/`](/C:/Users/dhj/repos/Tilbudsavis-HAOS-Plugin/addon).
 
-1. Copy `addon/` into an add-on repository folder accessible to Home Assistant.
-2. In Home Assistant, enable Advanced Mode.
-3. Go to **Settings → Add-ons → Add-on Store → Repositories**.
-4. Add the local repository or a Git repo containing this `addon/` folder.
-5. Install **Offer Radar**.
-6. Configure options.
-7. Start the add-on.
-8. Open the Web UI.
+Basic install flow:
 
-## First agent task
+1. Place this repository in a Home Assistant add-on repository.
+2. Ensure [`repository.yaml`](/C:/Users/dhj/repos/Tilbudsavis-HAOS-Plugin/repository.yaml) is visible to Home Assistant.
+3. Install the `Offer Radar` add-on.
+4. Configure options in the add-on UI.
+5. Start the add-on and open it through Home Assistant Ingress.
 
-Read `AGENTS.md`, then implement and test the vertical slice in `BUILD_PLAN.md` Phase 1.
+Container persistence path:
+
+- SQLite and runtime data: `/data/offer_radar.db`
+- Add-on options file: `/data/options.json`
+
+The entrypoint [`addon/run.sh`](/C:/Users/dhj/repos/Tilbudsavis-HAOS-Plugin/addon/run.sh) supports both add-on mode and non-Home-Assistant env-var mode.
+
+## Provider Limitations
+
+- The `mock` provider is the default local-safe mode and uses bundled fixtures.
+- The `etilbudsavis` adapter is intentionally isolated and treated as brittle.
+- No live provider access is required for tests.
+- The live unofficial adapter only runs if `OFFER_RADAR_ETILBUDSAVIS_SEARCH_URL` is configured.
+- Do not depend on undocumented provider fields outside the adapter layer.
+
+## Repository Layout
+
+```text
+addon/
+  app/
+    config.py
+    db.py
+    main.py
+    models.py
+    providers/
+    services/
+    static/
+    templates/
+  config.yaml
+  Dockerfile
+  requirements.txt
+  run.sh
+
+docs/
+  local-development.md
+
+scripts/
+  dev.sh
+  test.sh
+  dev.ps1
+  test.ps1
+
+tests/
+  ...
+```
+
+## Useful Commands
+
+Run the app with Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+Run Debian tests:
+
+```bash
+./scripts/test.sh
+```
+
+Run Windows tests:
+
+```powershell
+.\scripts\test.ps1
+```
+
+Build the add-on container directly:
+
+```bash
+docker build ./addon
+```
+
+## Notes
+
+- On first mock-mode startup, the app seeds a small starter watch list so the fixture sync produces visible matches in the UI baseline.
+- Expired offers are excluded from active views.
+- Upcoming offers are intentionally separated from active offers.
+- Store grouping is first-class, but product comparisons and best-deal sorting use the same normalized match data.
+
